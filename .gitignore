@@ -9,3 +9,4 @@ lib/
 *.import
 git*
 *.code-workspace
+export_presets.cfg
