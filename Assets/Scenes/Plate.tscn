@@ -1,0 +1,70 @@
+[gd_scene load_steps=2 format=2]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends StaticBody2D
+
+var plate
+
+signal select(p)
+
+
+func _ready():
+	if plate == null:
+		return
+	plate.shape = self
+	$Polygon.polygon = plate.edge_points
+	$Polygon.color = plate.color
+#	$Line.points = plate.edge_points
+	change_code(plate.code)
+	$Body.polygon = plate.edge_points
+
+
+func _input_event(viewport, event, shape_idx):
+	pass
+	if event is InputEventMouseButton:
+		if event.button_index == BUTTON_LEFT:
+			emit_signal(\"select\",plate)
+
+
+func _on_Plate_mouse_entered():
+	print(1)
+
+
+func change_code(code):
+	get_node(\"Node2D/Code\").text = code
+	get_node(\"Node2D/Code\").rect_position = plate.center - get_node(\"Node2D/Code\").rect_size / 2
+
+
+func change_color(color):
+	$Polygon.color = color
+
+
+func change_center(center):
+	$Code.rect_position = center - $Code.rect_size / 2
+"
+
+[node name="Plate" type="StaticBody2D"]
+input_pickable = true
+script = SubResource( 1 )
+
+[node name="Polygon" type="Polygon2D" parent="."]
+
+[node name="Line" type="Line2D" parent="."]
+points = PoolVector2Array( 490.205, 167.508 )
+width = 1.0
+default_color = Color( 0, 0, 0, 1 )
+
+[node name="Body" type="CollisionPolygon2D" parent="."]
+polygon = PoolVector2Array( 0, 100, -100, 0, 0, -100, 100, 0 )
+
+[node name="Node2D" type="Node2D" parent="."]
+z_index = 1
+
+[node name="Code" type="Label" parent="Node2D"]
+margin_right = 40.0
+margin_bottom = 14.0
+align = 1
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}

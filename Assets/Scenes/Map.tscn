@@ -1,0 +1,515 @@
+[gd_scene load_steps=5 format=2]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Node2D
+
+var p = preload(\"res://Assets/Scenes/Plate.tscn\")
+
+var picking = false
+var on_ui = false
+
+
+func _physics_process(delta):
+	if not on_ui and Input.is_mouse_button_pressed(BUTTON_LEFT):
+		if picking:
+			get_node(\"Camera2D/Control/Panel\").change_center(get_global_mouse_position())
+			picking = false
+		else:
+			var space_state = get_world_2d().direct_space_state
+			var result = space_state.intersect_point(get_global_mouse_position())
+			if result.size():
+	#			flag = false
+				result = result[0]
+				_select(result.collider.plate)
+			print(result)
+
+
+func _prepare():
+	for c in get_children():
+		if c is StaticBody2D:
+			remove_child(c)
+
+
+func _draw_map():
+	var _temp = p.instance()
+	var plate = MapParser.plates.back()
+	_temp.plate = plate
+	_temp.z_index = -2
+	add_child(_temp)
+
+
+func _select(plate):
+	get_node(\"Camera2D/Control/Panel\").display(plate)
+
+
+func _prepare_to_pick():
+	picking = true
+
+
+func _enter_ui():
+	on_ui = true
+
+
+func _exit_ui():
+	on_ui = false
+"
+
+[sub_resource type="GDScript" id=2]
+script/source = "extends Camera2D
+
+var dragged = false
+var on_ui = false
+var wheel_speed = 0.1
+
+func _prepare():
+	self.position = MapParser.size / 2
+
+
+func _input(event):
+	if not on_ui and event is InputEventMouseButton:
+		match event.button_index:
+			BUTTON_RIGHT:
+				print(MapParser.thread.is_active())
+			BUTTON_MIDDLE:
+				dragged = event.pressed
+			BUTTON_WHEEL_UP:
+				self.zoom -= Vector2(wheel_speed,wheel_speed)
+				if self.zoom.x < 0.2:
+					self.zoom = Vector2(0.2,0.2)
+				$Control.rect_scale = self.zoom
+			BUTTON_WHEEL_DOWN:
+				self.zoom += Vector2(wheel_speed,wheel_speed)
+				$Control.rect_scale = self.zoom
+	if dragged:
+		if event is InputEventMouseMotion:
+			self.position = self.position - event.relative * self.zoom
+
+
+func _enter_ui():
+	on_ui = true
+
+
+func _exit_ui():
+	on_ui = false
+"
+
+[sub_resource type="GDScript" id=3]
+script/source = "extends Panel
+
+signal prepare
+signal draw_map
+
+
+func _ready():
+	$ImportPath.text = Global.default_source
+	$ExportPath.text = Global.default_result
+	$Hint.visible = false
+	MapParser.connect(\"hint\",self,\"_hint\")
+
+
+func _on_Import_pressed():
+	var path = $ImportPath.text
+	if MapParser.read(path):
+		emit_signal(\"prepare\")
+		MapParser.thread.start(MapParser,\"parse\")
+
+
+func _on_Export_pressed():
+	var path = $ExportPath.text
+	MapParser.save(path)
+
+
+func _hint(info):
+	if info == \"completed\":
+		$Hint.text = \"Completed: \" + String(MapParser.plates.size())
+		$Hint.modulate = Color.white
+		$Hint.visible = true
+		emit_signal(\"draw_map\")
+	elif info == \"Wrong path\":
+		$Hint.text = info
+		$Hint.modulate = Color.red
+		$Hint.visible = true
+	elif info == \"completed all\":
+		$Hint.modulate = Color.green
+		$Hint.visible = true
+		MapParser.thread.wait_to_finish()
+
+
+func _color_changed(color):
+	VisualServer.set_default_clear_color(color)
+
+
+func _color_picker_created():
+	var p = $ColorPicker.get_popup()
+	p.rect_position = get_global_mouse_position() - Vector2(p.rect_size.x,0)
+
+
+func _on_Autocode_pressed():
+	MapParser.autocode()
+
+
+func _on_ResetCode_pressed():
+	MapParser.reset_code()
+"
+
+[sub_resource type="GDScript" id=4]
+script/source = "extends Panel
+
+onready var tween = $Tween
+
+var picking = false
+
+var plate
+
+var speed = 0.2
+
+
+func _process(delta):
+	if Input.is_action_pressed(\"ui_cancel\"):
+		recover()
+	if picking:
+		if Input.is_mouse_button_pressed(BUTTON_RIGHT):
+			picking = false
+			$CenterPoint.text = String(plate.center)
+		else:
+			var point = get_global_mouse_position()
+			point = Vector2(round(point.x),round(point.y))
+			$CenterPoint.text = String(point)
+
+
+func display(plate):
+	print(plate)
+	tween.interpolate_property(self,\"rect_position\",
+			rect_position,Vector2(1080,70),speed)
+	tween.start()
+	if not self.plate == plate:
+		self.plate = plate
+		_write()
+
+
+func recover():
+	tween.interpolate_property(self,\"rect_position\",
+			rect_position,Vector2(1280,70),speed)
+	tween.start()
+
+
+func _write():
+	$InstanceName.text = plate.to_string()
+	$CodeEdit.text = plate.code
+	$SizeNumber.value = plate.size
+	$ColorPicker.color = plate.color
+	$CenterPoint.text = String(plate.center)
+	$Points.clear()
+	for p in plate.edge_points:
+		$Points.add_text(String(p))
+		$Points.newline()
+
+
+func _text_changed():
+	plate.change_code($CodeEdit.text)
+
+
+func _color_changed(color):
+	plate.change_color(color.to_html(false))
+
+
+func _pick_point():
+	picking = true
+	$Pick.pressed = true
+
+
+func _value_changed(value):
+	plate.change_size(value)
+	print(value)
+
+
+func change_center(point):
+	point = Vector2(round(point.x),round(point.y))
+	plate.change_center(point)
+	$CenterPoint.text = String(point)
+	picking = false
+	$Pick.pressed = false
+"
+
+[node name="Map" type="Node2D"]
+script = SubResource( 1 )
+
+[node name="Camera2D" type="Camera2D" parent="."]
+current = true
+script = SubResource( 2 )
+
+[node name="Control" type="Control" parent="Camera2D"]
+margin_left = -640.0
+margin_top = -360.0
+margin_right = 640.0
+margin_bottom = 360.0
+rect_pivot_offset = Vector2( 640, 360 )
+mouse_filter = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Bar" type="Panel" parent="Camera2D/Control"]
+margin_right = 1280.0
+margin_bottom = 70.0
+mouse_filter = 1
+script = SubResource( 3 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ImportPath" type="TextEdit" parent="Camera2D/Control/Bar"]
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 500.0
+margin_bottom = 30.0
+caret_blink = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ExportPath" type="TextEdit" parent="Camera2D/Control/Bar"]
+margin_left = 10.0
+margin_top = 40.0
+margin_right = 500.0
+margin_bottom = 60.0
+caret_blink = true
+
+[node name="Import" type="Button" parent="Camera2D/Control/Bar"]
+margin_left = 500.0
+margin_top = 10.0
+margin_right = 560.0
+margin_bottom = 30.0
+focus_mode = 1
+text = "Import"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Export" type="Button" parent="Camera2D/Control/Bar"]
+margin_left = 500.0
+margin_top = 40.0
+margin_right = 560.0
+margin_bottom = 60.0
+focus_mode = 1
+text = "Export"
+
+[node name="Hint" type="Label" parent="Camera2D/Control/Bar"]
+margin_left = 560.0
+margin_top = 10.0
+margin_right = 720.0
+margin_bottom = 30.0
+text = "Completed: 0"
+align = 1
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Background" type="Label" parent="Camera2D/Control/Bar"]
+margin_left = 598.0
+margin_top = 40.0
+margin_right = 680.0
+margin_bottom = 60.0
+text = "Background: "
+align = 1
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ColorPicker" type="ColorPickerButton" parent="Camera2D/Control/Bar"]
+margin_left = 690.0
+margin_top = 35.0
+margin_right = 770.0
+margin_bottom = 65.0
+color = Color( 0.301961, 0.301961, 0.301961, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Autocode" type="Button" parent="Camera2D/Control/Bar"]
+margin_left = 800.0
+margin_top = 40.0
+margin_right = 812.0
+margin_bottom = 60.0
+text = "Autocode"
+
+[node name="ResetCode" type="Button" parent="Camera2D/Control/Bar"]
+margin_left = 900.0
+margin_top = 40.0
+margin_right = 983.0
+margin_bottom = 60.0
+text = "Reset code"
+
+[node name="Panel" type="Panel" parent="Camera2D/Control"]
+margin_left = 1280.0
+margin_top = 70.0
+margin_right = 1480.0
+margin_bottom = 720.0
+script = SubResource( 4 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Tween" type="Tween" parent="Camera2D/Control/Panel"]
+
+[node name="InstanceName" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 10.0
+margin_right = 200.0
+margin_bottom = 40.0
+valign = 1
+
+[node name="Code" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 10.0
+margin_top = 40.0
+margin_right = 200.0
+margin_bottom = 80.0
+text = "Code:"
+valign = 1
+
+[node name="CodeEdit" type="TextEdit" parent="Camera2D/Control/Panel"]
+margin_left = 40.0
+margin_top = 70.0
+margin_right = 190.0
+margin_bottom = 100.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Size" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 10.0
+margin_top = 100.0
+margin_right = 200.0
+margin_bottom = 140.0
+text = "Size:"
+valign = 1
+
+[node name="SizeNumber" type="SpinBox" parent="Camera2D/Control/Panel"]
+margin_left = 40.0
+margin_top = 130.0
+margin_right = 190.0
+margin_bottom = 160.0
+max_value = 4e+08
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Color" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 10.0
+margin_top = 160.0
+margin_right = 200.0
+margin_bottom = 200.0
+text = "Color:"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ColorPicker" type="ColorPickerButton" parent="Camera2D/Control/Panel"]
+margin_left = 40.0
+margin_top = 190.0
+margin_right = 120.0
+margin_bottom = 220.0
+edit_alpha = false
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Center" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 10.0
+margin_top = 220.0
+margin_right = 200.0
+margin_bottom = 260.0
+text = "Center: "
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="CenterPoint" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 40.0
+margin_top = 260.0
+margin_right = 190.0
+margin_bottom = 280.0
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Pick" type="Button" parent="Camera2D/Control/Panel"]
+margin_left = 100.0
+margin_top = 230.0
+margin_right = 140.0
+margin_bottom = 250.0
+hint_tooltip = "Pick a point to replace current one."
+text = "Pick"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="EdgePoints" type="Label" parent="Camera2D/Control/Panel"]
+margin_left = 10.0
+margin_top = 280.0
+margin_right = 200.0
+margin_bottom = 320.0
+text = "Edge Points:"
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Points" type="RichTextLabel" parent="Camera2D/Control/Panel"]
+margin_left = 40.0
+margin_top = 310.0
+margin_right = 190.0
+margin_bottom = 640.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+[connection signal="draw_map" from="Camera2D/Control/Bar" to="." method="_draw_map"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar" to="." method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar" to="Camera2D" method="_exit_ui"]
+[connection signal="prepare" from="Camera2D/Control/Bar" to="." method="_prepare"]
+[connection signal="prepare" from="Camera2D/Control/Bar" to="Camera2D" method="_prepare"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ImportPath" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ImportPath" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ExportPath" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ExportPath" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Import" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Import" to="Camera2D" method="_enter_ui"]
+[connection signal="pressed" from="Camera2D/Control/Bar/Import" to="Camera2D/Control/Bar" method="_on_Import_pressed"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Export" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Export" to="Camera2D" method="_enter_ui"]
+[connection signal="pressed" from="Camera2D/Control/Bar/Export" to="Camera2D/Control/Bar" method="_on_Export_pressed"]
+[connection signal="button_up" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D/Control/Bar" method="_color_picker_created"]
+[connection signal="color_changed" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D/Control/Bar" method="_color_changed"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ColorPicker" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ColorPicker" to="." method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D" method="_exit_ui"]
+[connection signal="pressed" from="Camera2D/Control/Bar/Autocode" to="Camera2D/Control/Bar" method="_on_Autocode_pressed"]
+[connection signal="pressed" from="Camera2D/Control/Bar/ResetCode" to="Camera2D/Control/Bar" method="_on_ResetCode_pressed"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Panel" to="." method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Panel" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/CodeEdit" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/CodeEdit" to="Camera2D" method="_enter_ui"]
+[connection signal="text_changed" from="Camera2D/Control/Panel/CodeEdit" to="Camera2D/Control/Panel" method="_text_changed"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/SizeNumber" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/SizeNumber" to="Camera2D" method="_enter_ui"]
+[connection signal="value_changed" from="Camera2D/Control/Panel/SizeNumber" to="Camera2D/Control/Panel" method="_value_changed"]
+[connection signal="color_changed" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D/Control/Panel" method="_color_changed"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/ColorPicker" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Panel/ColorPicker" to="." method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/Pick" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/Pick" to="Camera2D" method="_enter_ui"]
+[connection signal="pressed" from="Camera2D/Control/Panel/Pick" to="Camera2D/Control/Panel" method="_pick_point"]
+[connection signal="pressed" from="Camera2D/Control/Panel/Pick" to="." method="_prepare_to_pick"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/Points" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/Points" to="Camera2D" method="_enter_ui"]
