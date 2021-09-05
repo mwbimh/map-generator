@@ -142,6 +142,10 @@ func _color_changed(color):
 func _color_picker_created():
 	var p = $ColorPicker.get_popup()
 	p.rect_position = get_global_mouse_position() - Vector2(p.rect_size.x,0)
+	p.connect(\"mouse_entered\",get_node(\"/root/Map\"),\"_enter_ui\")
+	p.connect(\"mouse_exited\",get_node(\"/root/Map\"),\"_exit_ui\")
+	p.connect(\"mouse_entered\",get_node(\"/root/Map/Camera2D\"),\"_enter_ui\")
+	p.connect(\"mouse_exited\",get_node(\"/root/Map/Camera2D\"),\"_exit_ui\")
 
 
 func _on_Autocode_pressed():
@@ -229,6 +233,14 @@ func change_center(point):
 	$CenterPoint.text = String(point)
 	picking = false
 	$Pick.pressed = false
+
+
+func _color_picker_created():
+	var p = $ColorPicker.get_popup()
+	p.connect(\"mouse_entered\",get_node(\"/root/Map\"),\"_enter_ui\")
+	p.connect(\"mouse_exited\",get_node(\"/root/Map\"),\"_exit_ui\")
+	p.connect(\"mouse_entered\",get_node(\"/root/Map/Camera2D\"),\"_enter_ui\")
+	p.connect(\"mouse_exited\",get_node(\"/root/Map/Camera2D\"),\"_exit_ui\")
 "
 
 [node name="Map" type="Node2D"]
@@ -468,48 +480,63 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 [connection signal="draw_map" from="Camera2D/Control/Bar" to="." method="_draw_map"]
-[connection signal="mouse_entered" from="Camera2D/Control/Bar" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Bar" to="Camera2D" method="_enter_ui"]
-[connection signal="mouse_exited" from="Camera2D/Control/Bar" to="." method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar" to="." method="_enter_ui"]
 [connection signal="mouse_exited" from="Camera2D/Control/Bar" to="Camera2D" method="_exit_ui"]
-[connection signal="prepare" from="Camera2D/Control/Bar" to="." method="_prepare"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar" to="." method="_exit_ui"]
 [connection signal="prepare" from="Camera2D/Control/Bar" to="Camera2D" method="_prepare"]
-[connection signal="mouse_entered" from="Camera2D/Control/Bar/ImportPath" to="." method="_enter_ui"]
+[connection signal="prepare" from="Camera2D/Control/Bar" to="." method="_prepare"]
 [connection signal="mouse_entered" from="Camera2D/Control/Bar/ImportPath" to="Camera2D" method="_enter_ui"]
-[connection signal="mouse_entered" from="Camera2D/Control/Bar/ExportPath" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ImportPath" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ImportPath" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ImportPath" to="." method="_exit_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Bar/ExportPath" to="Camera2D" method="_enter_ui"]
-[connection signal="mouse_entered" from="Camera2D/Control/Bar/Import" to="." method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ExportPath" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ExportPath" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ExportPath" to="." method="_exit_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Bar/Import" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Import" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/Import" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/Import" to="." method="_exit_ui"]
 [connection signal="pressed" from="Camera2D/Control/Bar/Import" to="Camera2D/Control/Bar" method="_on_Import_pressed"]
-[connection signal="mouse_entered" from="Camera2D/Control/Bar/Export" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Bar/Export" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Export" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/Export" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/Export" to="." method="_exit_ui"]
 [connection signal="pressed" from="Camera2D/Control/Bar/Export" to="Camera2D/Control/Bar" method="_on_Export_pressed"]
 [connection signal="button_up" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D/Control/Bar" method="_color_picker_created"]
 [connection signal="color_changed" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D/Control/Bar" method="_color_changed"]
-[connection signal="mouse_entered" from="Camera2D/Control/Bar/ColorPicker" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D" method="_enter_ui"]
-[connection signal="mouse_exited" from="Camera2D/Control/Bar/ColorPicker" to="." method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/ColorPicker" to="." method="_enter_ui"]
 [connection signal="mouse_exited" from="Camera2D/Control/Bar/ColorPicker" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ColorPicker" to="." method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Autocode" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Bar/Autocode" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/Autocode" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/Autocode" to="." method="_exit_ui"]
 [connection signal="pressed" from="Camera2D/Control/Bar/Autocode" to="Camera2D/Control/Bar" method="_on_Autocode_pressed"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ResetCode" to="Camera2D" method="_exit_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Bar/ResetCode" to="." method="_exit_ui"]
 [connection signal="pressed" from="Camera2D/Control/Bar/ResetCode" to="Camera2D/Control/Bar" method="_on_ResetCode_pressed"]
-[connection signal="mouse_entered" from="Camera2D/Control/Panel" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Panel" to="Camera2D" method="_enter_ui"]
-[connection signal="mouse_exited" from="Camera2D/Control/Panel" to="." method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel" to="." method="_enter_ui"]
 [connection signal="mouse_exited" from="Camera2D/Control/Panel" to="Camera2D" method="_exit_ui"]
-[connection signal="mouse_entered" from="Camera2D/Control/Panel/CodeEdit" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Panel" to="." method="_exit_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Panel/CodeEdit" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/CodeEdit" to="." method="_enter_ui"]
 [connection signal="text_changed" from="Camera2D/Control/Panel/CodeEdit" to="Camera2D/Control/Panel" method="_text_changed"]
-[connection signal="mouse_entered" from="Camera2D/Control/Panel/SizeNumber" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Panel/SizeNumber" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/SizeNumber" to="." method="_enter_ui"]
 [connection signal="value_changed" from="Camera2D/Control/Panel/SizeNumber" to="Camera2D/Control/Panel" method="_value_changed"]
+[connection signal="button_up" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D/Control/Panel" method="_color_picker_created"]
 [connection signal="color_changed" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D/Control/Panel" method="_color_changed"]
-[connection signal="mouse_entered" from="Camera2D/Control/Panel/ColorPicker" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D" method="_enter_ui"]
-[connection signal="mouse_exited" from="Camera2D/Control/Panel/ColorPicker" to="." method="_exit_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/ColorPicker" to="." method="_enter_ui"]
 [connection signal="mouse_exited" from="Camera2D/Control/Panel/ColorPicker" to="Camera2D" method="_exit_ui"]
-[connection signal="mouse_entered" from="Camera2D/Control/Panel/Pick" to="." method="_enter_ui"]
+[connection signal="mouse_exited" from="Camera2D/Control/Panel/ColorPicker" to="." method="_exit_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Panel/Pick" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/Pick" to="." method="_enter_ui"]
 [connection signal="pressed" from="Camera2D/Control/Panel/Pick" to="Camera2D/Control/Panel" method="_pick_point"]
 [connection signal="pressed" from="Camera2D/Control/Panel/Pick" to="." method="_prepare_to_pick"]
-[connection signal="mouse_entered" from="Camera2D/Control/Panel/Points" to="." method="_enter_ui"]
 [connection signal="mouse_entered" from="Camera2D/Control/Panel/Points" to="Camera2D" method="_enter_ui"]
+[connection signal="mouse_entered" from="Camera2D/Control/Panel/Points" to="." method="_enter_ui"]

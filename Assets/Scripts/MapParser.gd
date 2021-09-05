@@ -5,7 +5,7 @@ var size
 
 var plates = []
 
-var thread
+var thread:Thread
 
 signal hint(info)
 
