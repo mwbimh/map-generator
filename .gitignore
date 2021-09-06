@@ -10,3 +10,6 @@ lib/
 git*
 *.code-workspace
 export_presets.cfg
+*.mp
+*.png
+*.bmp

@@ -29,9 +29,9 @@ func parse(arg):
 		for j in range(size.y):
 			var color = img.get_pixel(i,j).to_html()
 			if color.substr(0,2) != "00":
-				if is_legal(Vector2(i,j),color.substr(2)):
-					get_edge(Vector2(i,j),color.substr(2))
-					plates.back().size = mark_completed(Vector2(i,j),color.substr(2))
+				if is_legal(Vector2(i,j),Vector2(i,j),color.substr(2)):
+					if get_edge(Vector2(i,j),color.substr(2)):
+						plates.back().size = mark_completed(Vector2(i,j),color.substr(2))
 					emit_signal("hint","completed")
 	img.unlock()
 	emit_signal("hint","completed all")
@@ -72,23 +72,33 @@ func reset_code():
 func get_edge(point:Vector2,color):
 	var plate = Plate.new()
 	plate.color = color
-	var start = find_first(point,color)
+	var start = find_first(point,point,color)
 	var pre = point
 	if start == null:
-		return null
+		return false
 	plate.add_point(start)
-	for p in plate.edge_points:
-		if p == Vector2(0,73):
+	while true:
+		var p = plate.edge_points.back()
+		if p == Vector2(142,454):
 			pass
 		var _temp = find_next(p,pre,color)
 		if _temp == null:
-			break
+			plate.edge_points.pop_back()
+			img.set_pixelv(p,Color(0))
+			if plate.edge_points.size() >= 2:
+				pre = plate.edge_points[plate.edge_points.size() - 2]
+			elif plate.edge_points.size() == 1:
+				pre = point
+			else:
+				return false
+			continue
 		elif _temp == start:
 			break
 		pre = p
 		plate.add_point(_temp)
 	plate.complete()
 	plates.append(plate)
+	return true
 
 
 func mark_completed(point:Vector2,color):
@@ -115,7 +125,7 @@ func mark_completed(point:Vector2,color):
 	return arr.size()
 
 
-func find_first(point:Vector2,color):
+func find_first(point:Vector2,pre,color):
 	var p = Vector2(0,0)
 
 	if out_of_bound(point+Vector2(0,-1),color):
@@ -132,17 +142,17 @@ func find_first(point:Vector2,color):
 
 	p = clock_rotation(p)
 	if not out_of_bound(p + point,color) and img.get_pixelv(p + point).a > 0.6:
-		if is_edge(p + point,color) and is_legal(p + point,color):
+		if is_edge(p + point,color) and is_legal(p + point,pre,color):
 			return p + point
 
 	p = clock_rotation(p)
 	if not out_of_bound(p + point,color) and img.get_pixelv(p + point).a > 0.6:
-		if is_edge(p + point,color) and is_legal(p + point,color):
+		if is_edge(p + point,color) and is_legal(p + point,pre,color):
 			return p + point
 
 	p = clock_rotation(p)
 	if not out_of_bound(p + point,color) and img.get_pixelv(p + point).a > 0.6:
-		if is_edge(p + point,color) and is_legal(p + point,color):
+		if is_edge(p + point,color) and is_legal(p + point,pre,color):
 			return p + point
 
 	return null
@@ -153,17 +163,17 @@ func find_next(point:Vector2,pre:Vector2,color):
 
 	p = clock_rotation(p)
 	if not out_of_bound(p + point,color) and img.get_pixelv(p + point).a > 0.6:
-		if is_edge(p + point,color) and is_legal(p + point,color):
+		if is_edge(p + point,color) and is_legal(p + point,point,color):
 			return p + point
 
 	p = clock_rotation(p)
 	if not out_of_bound(p + point,color) and img.get_pixelv(p + point).a > 0.6:
-		if is_edge(p + point,color) and is_legal(p + point,color):
+		if is_edge(p + point,color) and is_legal(p + point,point,color):
 			return p + point
 
 	p = clock_rotation(p)
 	if not out_of_bound(p + point,color) and img.get_pixelv(p + point).a > 0.6:
-		if is_edge(p + point,color) and is_legal(p + point,color):
+		if is_edge(p + point,color) and is_legal(p + point,point,color):
 			return p + point
 
 	return null
@@ -177,7 +187,8 @@ func anticlock_rotation(v:Vector2):
 	return Vector2(-v.y,v.x)
 
 
-func is_legal(point,color):
+func is_legal(point,pre,color):
+	var p = pre - point
 	var f1 = out_of_bound(point+Vector2(0,-1),color)
 	var f2 = out_of_bound(point+Vector2(0,1),color)
 	var f3 = out_of_bound(point+Vector2(-1,0),color)
@@ -191,16 +202,31 @@ func is_legal(point,color):
 		img.set_pixelv(point,Color(0))
 		return false
 
-	if out_of_bound(point+Vector2(1,1),color) and out_of_bound(point+Vector2(-1,-1),color):
-		if not(f1 or f2 or f3 or f4):
+	var f5 = out_of_bound(point+Vector2(1,1),color)
+	var f6 = out_of_bound(point+Vector2(-1,-1),color)
+	var f7 = out_of_bound(point+Vector2(1,-1),color)
+	var f8 = out_of_bound(point+Vector2(-1,1),color)
+	if p == Vector2(0,-1):
+		if (f6 and f4) or (f7 and f3):
 			img.set_pixelv(point,Color(0))
 			return false
-	
-	if out_of_bound(point+Vector2(1,-1),color) and out_of_bound(point+Vector2(-1,1),color):
-		if not(f1 or f2 or f3 or f4):
+	if p == Vector2(0,1):
+		if (f8 and f4) or (f5 and f3):
 			img.set_pixelv(point,Color(0))
 			return false
-	
+	if p == Vector2(-1,0):
+		if (f8 and f1) or (f6 and f2):
+			img.set_pixelv(point,Color(0))
+			return false
+	if p == Vector2(1,0):
+		if (f5 and f1) or (f7 and f2):
+			img.set_pixelv(point,Color(0))
+			return false
+	if (f5 and f6) or (f7 and f8):
+		if not f1 and not f2 and not f3 and not f4:
+			img.set_pixelv(point,Color(0))
+			return false
+
 	return true
 
 

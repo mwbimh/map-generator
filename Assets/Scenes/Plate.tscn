@@ -15,6 +15,7 @@ func _ready():
 	$Polygon.polygon = plate.edge_points
 	$Polygon.color = plate.color
 #	$Line.points = plate.edge_points
+#	$Line.default_color = plate.color
 	change_code(plate.code)
 	$Body.polygon = plate.edge_points
 
@@ -51,7 +52,7 @@ script = SubResource( 1 )
 
 [node name="Line" type="Line2D" parent="."]
 points = PoolVector2Array( 490.205, 167.508 )
-width = 1.0
+width = 0.5
 default_color = Color( 0, 0, 0, 1 )
 
 [node name="Body" type="CollisionPolygon2D" parent="."]
